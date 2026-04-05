@@ -195,3 +195,14 @@ func TestMap(t *testing.T) {
 		assert.Equal(t, expected[key], val)
 	}
 }
+
+func TestNilPointerInSlice(t *testing.T) {
+	t.Parallel()
+
+	s1 := "hello"
+	s3 := "world"
+	input := []*string{&s1, nil, &s3}
+	res, err := tsv.NewTSVEncoder(false).Encode(input)
+	assert.NoError(t, err)
+	assert.Equal(t, "hello\t\tworld", string(res))
+}

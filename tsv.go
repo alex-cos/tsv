@@ -107,13 +107,11 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 func (e *Encoder) interfaceEncoderFn() encoderFunc {
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		if val.IsNil() {
-			buf.WriteString("null")
-		} else {
-			val := val.Elem()
-			encoder := e.typeEncoder(val.Type())
-			return encoder(buf, val)
+			return nil
 		}
-		return nil
+		elem := val.Elem()
+		encoder := e.typeEncoder(elem.Type())
+		return encoder(buf, elem)
 	}
 }
 
