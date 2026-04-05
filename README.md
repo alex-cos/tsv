@@ -87,7 +87,7 @@ enc := tsv.NewTSVEncoder(
 | `struct` | Tab-separated fields |
 | `map` | Key-value pairs, one per line |
 | `slice` / `array` (primitives) | Tab-separated values |
-| `slice` / `array` (complex) | JSON-serialized, tab-separated |
+| `slice` / `array` (complex) | JSON-serialized |
 | `pointer` | Dereferenced value, or empty if nil |
 | `interface{}` | Underlying type, or empty if nil |
 

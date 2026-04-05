@@ -381,11 +381,3 @@ formatters:
   # Enable specific formatter.
   # Default: [] (uses standard Go formatting)
   enable: []
-  exclusions:
-    generated: lax
-    # Log a warning if an exclusion path is unused.
-    # Default: false
-    warn-unused: true
-    # Which file paths to exclude.
-    paths:
-      - "^services\\.*.go$"

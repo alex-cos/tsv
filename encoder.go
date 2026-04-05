@@ -11,7 +11,8 @@ import (
 
 const (
 	tab = 0x09
-	eol = 0x0A
+	cr  = 0x0D
+	lf  = 0x0A
 )
 
 type encoderFunc func(buf *bytes.Buffer, v reflect.Value) error
@@ -39,6 +40,21 @@ func NewTSVEncoder(opts ...Option) *Encoder {
 	return e
 }
 
+func (e *Encoder) delim() string {
+	if e.delimiter != 0 {
+		return string(e.delimiter)
+	}
+	return string(rune(tab))
+}
+
+func (e *Encoder) endln() []byte {
+	if e.crlf {
+		return []byte{cr, lf}
+	} else {
+		return []byte{lf}
+	}
+}
+
 // Encode encodes given interface to TSV format.
 func (e *Encoder) Encode(v any) ([]byte, error) {
 	var buf bytes.Buffer
@@ -51,13 +67,6 @@ func (e *Encoder) Encode(v any) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-func (e *Encoder) delim() string {
-	if e.delimiter != 0 {
-		return string(e.delimiter)
-	}
-	return string(rune(tab))
 }
 
 func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
@@ -118,11 +127,16 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 	}
 
 	encoder := e.typeEncoder(elemType)
-
+	kind := elemType.Kind()
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		for i := range val.Len() {
 			if i > 0 {
-				buf.WriteString(e.delim())
+				if kind == reflect.Array ||
+					kind == reflect.Slice {
+					buf.Write(e.endln())
+				} else {
+					buf.WriteString(e.delim())
+				}
 			}
 			if err := encoder(buf, val.Index(i)); err != nil {
 				return err
@@ -148,7 +162,6 @@ func (e *Encoder) sliceEncoderFn(typ reflect.Type) encoderFunc {
 
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		if val.IsNil() {
-			buf.WriteString("null")
 			return nil
 		}
 		return enc(buf, val)
@@ -262,7 +275,6 @@ func (e *Encoder) mapEncoderFn(typ reflect.Type) encoderFunc {
 
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		if val.IsNil() {
-			buf.WriteString("null")
 			return nil
 		}
 
@@ -270,11 +282,7 @@ func (e *Encoder) mapEncoderFn(typ reflect.Type) encoderFunc {
 		iter := val.MapRange()
 		for iter.Next() {
 			if !first {
-				if e.crlf {
-					buf.WriteString("\r\n")
-				} else {
-					buf.WriteByte(eol)
-				}
+				buf.Write(e.endln())
 			}
 			if err := keyEncoder(buf, iter.Key()); err != nil {
 				return err

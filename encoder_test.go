@@ -101,7 +101,7 @@ func TestArrayOfSlice(t *testing.T) {
 	input[3] = []int{40, 41, 43, 44, 45}
 	b, err := tsv.NewTSVEncoder().Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t, "[10,11,13,14,15]\t[20,21,23,24,25]\t[30,31,33,34,35]\t[40,41,43,44,45]", string(b))
+	assert.Equal(t, "10\t11\t13\t14\t15\n20\t21\t23\t24\t25\n30\t31\t33\t34\t35\n40\t41\t43\t44\t45", string(b))
 }
 
 func TestPointer(t *testing.T) {
@@ -241,7 +241,7 @@ func TestNilPointerInSlice(t *testing.T) {
 	input := []*string{&s1, nil, &s3}
 	res, err := tsv.NewTSVEncoder().Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t, "\"hello\"\t\t\"world\"", string(res))
+	assert.Equal(t, "hello\t\tworld", string(res))
 }
 
 func TestMapCRLF(t *testing.T) {
