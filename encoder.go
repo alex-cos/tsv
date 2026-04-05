@@ -20,6 +20,7 @@ type encoderFunc func(buf *bytes.Buffer, v reflect.Value) error
 type Encoder struct {
 	timeFormat string
 	crlf       bool
+	delimiter  rune
 }
 
 // NewTSVEncoder builds and returns a new TSVEncoder.
@@ -28,6 +29,8 @@ type Encoder struct {
 func NewTSVEncoder(opts ...Option) *Encoder {
 	e := &Encoder{
 		timeFormat: "",
+		crlf:       false,
+		delimiter:  0x09,
 	}
 	for _, opt := range opts {
 		opt(e)
@@ -50,6 +53,13 @@ func (e *Encoder) Encode(v any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (e *Encoder) delim() string {
+	if e.delimiter != 0 {
+		return string(e.delimiter)
+	}
+	return string(rune(tab))
+}
+
 func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 	switch typ.Kind() {
 	case reflect.Bool:
@@ -63,7 +73,7 @@ func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 	case reflect.Float64:
 		return float64Encoder
 	case reflect.String:
-		return stringEncoder
+		return e.stringEncoderFn()
 	case reflect.Interface:
 		return e.interfaceEncoderFn()
 	case reflect.Struct:
@@ -91,7 +101,7 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 		return func(buf *bytes.Buffer, val reflect.Value) error {
 			for i := range val.Len() {
 				if i > 0 {
-					buf.WriteByte(tab)
+					buf.WriteString(e.delim())
 				}
 				elem := val.Index(i)
 				if elemType.Kind() == reflect.Ptr && elem.IsNil() {
@@ -112,7 +122,7 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		for i := range val.Len() {
 			if i > 0 {
-				buf.WriteByte(tab)
+				buf.WriteString(e.delim())
 			}
 			if err := encoder(buf, val.Index(i)); err != nil {
 				return err
@@ -162,7 +172,7 @@ func (e *Encoder) structEncoderFn(typ reflect.Type) encoderFunc {
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		for i, fi := range fields {
 			if i > 0 {
-				buf.WriteByte(tab)
+				buf.WriteString(e.delim())
 			}
 			if err := fi.encoder(buf, val.Field(fi.index)); err != nil {
 				return err
@@ -201,29 +211,36 @@ func float64Encoder(buf *bytes.Buffer, val reflect.Value) error {
 	return nil
 }
 
-func stringEncoder(buf *bytes.Buffer, val reflect.Value) error {
-	s := val.String()
-	start := 0
-	for i := range len(s) {
-		var repl string
-		switch s[i] {
-		case '\\':
-			repl = `\\`
-		case '\t':
-			repl = `\t`
-		case '\n':
-			repl = `\n`
-		case '\r':
-			repl = `\r`
-		default:
-			continue
+func (e *Encoder) stringEncoderFn() encoderFunc {
+	return func(buf *bytes.Buffer, val reflect.Value) error {
+		s := val.String()
+		del := e.delim()
+		start := 0
+		for i := range len(s) {
+			var repl string
+			switch s[i] {
+			case '\\':
+				repl = `\\`
+			case '\t':
+				repl = `\t`
+			case '\n':
+				repl = `\n`
+			case '\r':
+				repl = `\r`
+			default:
+				if del != "" && s[i] == del[0] {
+					repl = `\` + del
+				} else {
+					continue
+				}
+			}
+			buf.WriteString(s[start:i])
+			buf.WriteString(repl)
+			start = i + 1
 		}
-		buf.WriteString(s[start:i])
-		buf.WriteString(repl)
-		start = i + 1
+		buf.WriteString(s[start:])
+		return nil
 	}
-	buf.WriteString(s[start:])
-	return nil
 }
 
 func (e *Encoder) timeEncoder(buf *bytes.Buffer, val reflect.Value) error {
@@ -262,7 +279,7 @@ func (e *Encoder) mapEncoderFn(typ reflect.Type) encoderFunc {
 			if err := keyEncoder(buf, iter.Key()); err != nil {
 				return err
 			}
-			buf.WriteByte(tab)
+			buf.WriteString(e.delim())
 			if err := valueEncoder(buf, iter.Value()); err != nil {
 				return err
 			}

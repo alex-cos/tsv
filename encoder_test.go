@@ -299,3 +299,37 @@ func TestMap(t *testing.T) {
 		assert.Equal(t, expected[key], val)
 	}
 }
+
+func TestDelimiter(t *testing.T) {
+	t.Parallel()
+
+	type row struct {
+		Name string
+		Age  int
+	}
+	input := row{Name: "Alice", Age: 30}
+
+	res, err := tsv.NewTSVEncoder(tsv.WithDelimiter(',')).Encode(input)
+	assert.NoError(t, err)
+	assert.Equal(t, "Alice,30", string(res))
+}
+
+func TestDelimiterInSlice(t *testing.T) {
+	t.Parallel()
+
+	input := []string{"foo", "bar", "baz"}
+
+	res, err := tsv.NewTSVEncoder(tsv.WithDelimiter(';')).Encode(input)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo;bar;baz", string(res))
+}
+
+func TestDelimiterEscaping(t *testing.T) {
+	t.Parallel()
+
+	input := []string{"hello;world", "foo"}
+
+	res, err := tsv.NewTSVEncoder(tsv.WithDelimiter(';')).Encode(input)
+	assert.NoError(t, err)
+	assert.Equal(t, `hello\;world;foo`, string(res))
+}

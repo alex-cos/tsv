@@ -18,3 +18,11 @@ func WithCRLF() Option {
 		e.crlf = true
 	}
 }
+
+// WithDelimiter sets a custom field delimiter.
+// By default, a tab character is used.
+func WithDelimiter(delimiter rune) Option {
+	return func(e *Encoder) {
+		e.delimiter = delimiter
+	}
+}

@@ -151,7 +151,3 @@ b, _ := tsv.NewTSVEncoder().Encode(data)
 ```
 
 Note: Map iteration order is non-deterministic in Go.
-
-## License
-
-MIT
