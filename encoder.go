@@ -19,6 +19,7 @@ type encoderFunc func(buf *bytes.Buffer, v reflect.Value) error
 // Encoder defines structure for TSV Encoder.
 type Encoder struct {
 	timeFormat string
+	crlf       bool
 }
 
 // NewTSVEncoder builds and returns a new TSVEncoder.
@@ -252,7 +253,11 @@ func (e *Encoder) mapEncoderFn(typ reflect.Type) encoderFunc {
 		iter := val.MapRange()
 		for iter.Next() {
 			if !first {
-				buf.WriteByte(eol)
+				if e.crlf {
+					buf.WriteString("\r\n")
+				} else {
+					buf.WriteByte(eol)
+				}
 			}
 			if err := keyEncoder(buf, iter.Key()); err != nil {
 				return err

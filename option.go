@@ -10,3 +10,11 @@ func WithTimeFormat(format string) Option {
 		e.timeFormat = format
 	}
 }
+
+// WithCRLF sets the line ending to CRLF (\r\n) instead of LF (\n).
+// This is useful for Windows compatibility.
+func WithCRLF() Option {
+	return func(e *Encoder) {
+		e.crlf = true
+	}
+}

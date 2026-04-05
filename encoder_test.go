@@ -244,6 +244,33 @@ func TestNilPointerInSlice(t *testing.T) {
 	assert.Equal(t, "\"hello\"\t\t\"world\"", string(res))
 }
 
+func TestMapCRLF(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]int{
+		"a": 1,
+		"b": 2,
+	}
+	res, err := tsv.NewTSVEncoder(tsv.WithCRLF()).Encode(input)
+	assert.NoError(t, err)
+
+	lines := strings.Split(string(res), "\r\n")
+	assert.Len(t, lines, 2)
+
+	expected := map[string]int{
+		"a": 1,
+		"b": 2,
+	}
+	for _, line := range lines {
+		parts := strings.Split(line, "\t")
+		assert.Len(t, parts, 2)
+		key := parts[0]
+		val, err := strconv.Atoi(parts[1])
+		assert.NoError(t, err)
+		assert.Equal(t, expected[key], val)
+	}
+}
+
 func TestMap(t *testing.T) {
 	t.Parallel()
 
