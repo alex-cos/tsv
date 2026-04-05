@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"time"
@@ -69,6 +70,16 @@ func (e *Encoder) Encode(v any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// EncodeTo encodes given interface to TSV format and writes it to writer.
+func (e *Encoder) EncodeTo(w io.Writer, v any) error {
+	b, err := e.Encode(v)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
+}
+
 func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 	switch typ.Kind() {
 	case reflect.Bool:
@@ -107,23 +118,7 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 	elemType := typ.Elem()
 
 	if isComplexType(elemType) {
-		return func(buf *bytes.Buffer, val reflect.Value) error {
-			for i := range val.Len() {
-				if i > 0 {
-					buf.WriteString(e.delim())
-				}
-				elem := val.Index(i)
-				if elemType.Kind() == reflect.Ptr && elem.IsNil() {
-					continue
-				}
-				b, err := json.Marshal(elem.Interface())
-				if err != nil {
-					return err
-				}
-				buf.Write(b)
-			}
-			return nil
-		}
+		return e.complexEncoderFn(elemType)
 	}
 
 	encoder := e.typeEncoder(elemType)
@@ -141,6 +136,26 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 			if err := encoder(buf, val.Index(i)); err != nil {
 				return err
 			}
+		}
+		return nil
+	}
+}
+
+func (e *Encoder) complexEncoderFn(elemType reflect.Type) encoderFunc {
+	return func(buf *bytes.Buffer, val reflect.Value) error {
+		for i := range val.Len() {
+			if i > 0 {
+				buf.WriteString(e.delim())
+			}
+			elem := val.Index(i)
+			if elemType.Kind() == reflect.Ptr && elem.IsNil() {
+				continue
+			}
+			b, err := json.Marshal(elem.Interface())
+			if err != nil {
+				return err
+			}
+			buf.Write(b)
 		}
 		return nil
 	}

@@ -1,6 +1,7 @@
 package tsv_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -332,4 +333,30 @@ func TestDelimiterEscaping(t *testing.T) {
 	res, err := tsv.NewTSVEncoder(tsv.WithDelimiter(';')).Encode(input)
 	assert.NoError(t, err)
 	assert.Equal(t, `hello\;world;foo`, string(res))
+}
+
+func TestEncodeTo(t *testing.T) {
+	t.Parallel()
+
+	input := []string{"foo", "bar", "baz"}
+
+	var buf bytes.Buffer
+	err := tsv.NewTSVEncoder().EncodeTo(&buf, input)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo\tbar\tbaz", buf.String())
+}
+
+func TestEncodeToStruct(t *testing.T) {
+	t.Parallel()
+
+	type row struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	input := row{Name: "Alice", Age: 30}
+
+	var buf bytes.Buffer
+	err := tsv.NewTSVEncoder().EncodeTo(&buf, input)
+	assert.NoError(t, err)
+	assert.Equal(t, "Alice\t30", buf.String())
 }
