@@ -68,7 +68,7 @@ func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 		}
 		return e.structEncoderFn(typ)
 	case reflect.Map:
-		return unsupportedTypeEncoder
+		return e.mapEncoderFn(typ)
 	case reflect.Slice:
 		return e.sliceEncoderFn(typ)
 	case reflect.Array:
@@ -236,6 +236,35 @@ func (e *Encoder) timeNiceEncoderFn() encoderFunc {
 			return fmt.Errorf("wrong time value: %s", val.Type().String())
 		}
 		return stringEncoder(buf, res[0])
+	}
+}
+
+func (e *Encoder) mapEncoderFn(typ reflect.Type) encoderFunc {
+	keyEncoder := e.typeEncoder(typ.Key())
+	valueEncoder := e.typeEncoder(typ.Elem())
+
+	return func(buf *bytes.Buffer, val reflect.Value) error {
+		if val.IsNil() {
+			buf.WriteString("null")
+			return nil
+		}
+
+		first := true
+		iter := val.MapRange()
+		for iter.Next() {
+			if !first {
+				buf.WriteByte(eol)
+			}
+			if err := keyEncoder(buf, iter.Key()); err != nil {
+				return err
+			}
+			buf.WriteByte(tab)
+			if err := valueEncoder(buf, iter.Value()); err != nil {
+				return err
+			}
+			first = false
+		}
+		return nil
 	}
 }
 

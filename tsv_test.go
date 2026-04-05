@@ -1,6 +1,8 @@
 package tsv_test
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -171,7 +173,25 @@ func TestMap(t *testing.T) {
 	input := map[string]int{
 		"v1": 10,
 		"v2": 11,
+		"v3": 12,
 	}
-	_, err := tsv.NewTSVEncoder(false).Encode(input)
-	assert.Error(t, err)
+	res, err := tsv.NewTSVEncoder(false).Encode(input)
+	assert.NoError(t, err)
+
+	lines := strings.Split(string(res), "\n")
+	assert.Len(t, lines, 3)
+
+	expected := map[string]int{
+		"v1": 10,
+		"v2": 11,
+		"v3": 12,
+	}
+	for _, line := range lines {
+		parts := strings.Split(line, "\t")
+		assert.Len(t, parts, 2)
+		key := parts[0]
+		val, err := strconv.Atoi(parts[1])
+		assert.NoError(t, err)
+		assert.Equal(t, expected[key], val)
+	}
 }
