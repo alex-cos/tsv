@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 const (
@@ -16,16 +17,21 @@ type encoderFunc func(buf *bytes.Buffer, v reflect.Value) error
 
 // Encoder defines structure for TSV Encoder.
 type Encoder struct {
-	nice       bool
 	timeFormat string
 }
 
-// NewTSVEncoder builds and return a new TSVEncoder.
-func NewTSVEncoder(nice bool) *Encoder {
-	return &Encoder{
-		nice:       nice,
-		timeFormat: "2006/01/02 15:04:05",
+// NewTSVEncoder builds and returns a new TSVEncoder.
+// By default, time.Time values are encoded as Unix epoch timestamps.
+// Use WithTimeFormat to specify a custom date/time format.
+func NewTSVEncoder(opts ...Option) *Encoder {
+	e := &Encoder{
+		timeFormat: "",
 	}
+	for _, opt := range opts {
+		opt(e)
+	}
+
+	return e
 }
 
 // Encode encodes given interface to TSV format.
@@ -59,12 +65,8 @@ func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 	case reflect.Interface:
 		return e.interfaceEncoderFn()
 	case reflect.Struct:
-		name := fmt.Sprintf("%s.%s", typ.PkgPath(), typ.Name())
-		if name == "time.Time" {
-			if e.nice {
-				return e.timeNiceEncoderFn()
-			}
-			return timeEncoder
+		if typ == reflect.TypeOf(time.Time{}) {
+			return e.timeEncoder
 		}
 		return e.structEncoderFn(typ)
 	case reflect.Map:
@@ -208,33 +210,17 @@ func stringEncoder(buf *bytes.Buffer, val reflect.Value) error {
 	return nil
 }
 
-func timeEncoder(buf *bytes.Buffer, val reflect.Value) error {
-	_, ok := val.Type().MethodByName("Unix")
+func (e *Encoder) timeEncoder(buf *bytes.Buffer, val reflect.Value) error {
+	t, ok := val.Interface().(time.Time)
 	if !ok {
-		return fmt.Errorf("wrong time value: %s", val.Type().String())
+		return nil
 	}
-	method := val.MethodByName("Unix")
-	res := method.Call([]reflect.Value{})
-	if len(res) != 1 {
-		return fmt.Errorf("wrong time value: %s", val.Type().String())
+	if e.timeFormat != "" {
+		buf.WriteString(t.Format(e.timeFormat))
+	} else {
+		buf.Write(strconv.AppendInt(nil, t.Unix(), 10))
 	}
-	return intEncoder(buf, res[0])
-}
-
-func (e *Encoder) timeNiceEncoderFn() encoderFunc {
-	return func(buf *bytes.Buffer, val reflect.Value) error {
-		_, ok := val.Type().MethodByName("Format")
-		if !ok {
-			return fmt.Errorf("wrong time value: %s", val.Type().String())
-		}
-		method := val.MethodByName("Format")
-		in := []reflect.Value{reflect.ValueOf(e.timeFormat)}
-		res := method.Call(in)
-		if len(res) != 1 {
-			return fmt.Errorf("wrong time value: %s", val.Type().String())
-		}
-		return stringEncoder(buf, res[0])
-	}
+	return nil
 }
 
 func (e *Encoder) mapEncoderFn(typ reflect.Type) encoderFunc {
