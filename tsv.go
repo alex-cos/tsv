@@ -2,6 +2,7 @@ package tsv
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -84,19 +85,33 @@ func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 
 func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 	elemType := typ.Elem()
+
+	if isComplexType(elemType) {
+		return func(buf *bytes.Buffer, val reflect.Value) error {
+			for i := range val.Len() {
+				if i > 0 {
+					buf.WriteByte(tab)
+				}
+				elem := val.Index(i)
+				if elemType.Kind() == reflect.Ptr && elem.IsNil() {
+					continue
+				}
+				b, err := json.Marshal(elem.Interface())
+				if err != nil {
+					return err
+				}
+				buf.Write(b)
+			}
+			return nil
+		}
+	}
+
 	encoder := e.typeEncoder(elemType)
 
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		for i := range val.Len() {
 			if i > 0 {
-				k := elemType.Kind()
-				if k == reflect.Array ||
-					k == reflect.Slice ||
-					k == reflect.Struct {
-					buf.WriteByte(eol)
-				} else {
-					buf.WriteByte(tab)
-				}
+				buf.WriteByte(tab)
 			}
 			if err := encoder(buf, val.Index(i)); err != nil {
 				return err

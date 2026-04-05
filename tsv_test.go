@@ -1,6 +1,7 @@
 package tsv_test
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -90,9 +91,9 @@ func TestSlice(t *testing.T) {
 }
 
 func TestArrayOfSlice(t *testing.T) {
-	var input [4][]int
-
 	t.Parallel()
+
+	var input [4][]int
 
 	input[0] = []int{10, 11, 13, 14, 15}
 	input[1] = []int{20, 21, 23, 24, 25}
@@ -100,7 +101,7 @@ func TestArrayOfSlice(t *testing.T) {
 	input[3] = []int{40, 41, 43, 44, 45}
 	b, err := tsv.NewTSVEncoder().Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t, "10\t11\t13\t14\t15\n20\t21\t23\t24\t25\n30\t31\t33\t34\t35\n40\t41\t43\t44\t45", string(b))
+	assert.Equal(t, "[10,11,13,14,15]\t[20,21,23,24,25]\t[30,31,33,34,35]\t[40,41,43,44,45]", string(b))
 }
 
 func TestPointer(t *testing.T) {
@@ -154,17 +155,93 @@ func TestTimeEncoder(t *testing.T) {
 func TestArrayOfStruct(t *testing.T) {
 	t.Parallel()
 
-	input := []struct {
-		v1 string
-		v2 int
-	}{
-		{v1: "Test1", v2: 10},
-		{v1: "Test2", v2: 20},
-		{v1: "Test3", v2: 30},
+	type row struct {
+		V1 string `json:"v1"`
+		V2 int    `json:"v2"`
+	}
+	input := []row{
+		{V1: "Test1", V2: 10},
+		{V1: "Test2", V2: 20},
+		{V1: "Test3", V2: 30},
 	}
 	res, err := tsv.NewTSVEncoder().Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t, "Test1\t10\nTest2\t20\nTest3\t30", string(res))
+	assert.Equal(t,
+		"{\"v1\":\"Test1\",\"v2\":10}\t{\"v1\":\"Test2\",\"v2\":20}\t{\"v1\":\"Test3\",\"v2\":30}",
+		string(res),
+	)
+}
+
+func TestSliceOfStruct(t *testing.T) {
+	t.Parallel()
+
+	type row struct {
+		V1 string `json:"v1"`
+		V2 int    `json:"v2"`
+	}
+	input := []row{
+		{V1: "A", V2: 1},
+		{V1: "B", V2: 2},
+	}
+	res, err := tsv.NewTSVEncoder().Encode(input)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		"{\"v1\":\"A\",\"v2\":1}\t{\"v1\":\"B\",\"v2\":2}",
+		string(res),
+	)
+}
+
+func TestSliceOfMap(t *testing.T) {
+	t.Parallel()
+
+	input := []map[string]int{
+		{"a": 1, "b": 2},
+		{"c": 3},
+	}
+	res, err := tsv.NewTSVEncoder().Encode(input)
+	assert.NoError(t, err)
+
+	lines := strings.Split(string(res), "\t")
+	assert.Len(t, lines, 2)
+
+	var m1, m2 map[string]int
+	assert.NoError(t, json.Unmarshal([]byte(lines[0]), &m1))
+	assert.Equal(t, 1, m1["a"])
+	assert.Equal(t, 2, m1["b"])
+
+	assert.NoError(t, json.Unmarshal([]byte(lines[1]), &m2))
+	assert.Equal(t, 3, m2["c"])
+}
+
+func TestArrayOfMap(t *testing.T) {
+	t.Parallel()
+
+	var input [2]map[string]string
+	input[0] = map[string]string{"x": "foo"}
+	input[1] = map[string]string{"y": "bar"}
+	res, err := tsv.NewTSVEncoder().Encode(input)
+	assert.NoError(t, err)
+
+	lines := strings.Split(string(res), "\t")
+	assert.Len(t, lines, 2)
+
+	var m1, m2 map[string]string
+	assert.NoError(t, json.Unmarshal([]byte(lines[0]), &m1))
+	assert.Equal(t, "foo", m1["x"])
+
+	assert.NoError(t, json.Unmarshal([]byte(lines[1]), &m2))
+	assert.Equal(t, "bar", m2["y"])
+}
+
+func TestNilPointerInSlice(t *testing.T) {
+	t.Parallel()
+
+	s1 := "hello"
+	s3 := "world"
+	input := []*string{&s1, nil, &s3}
+	res, err := tsv.NewTSVEncoder().Encode(input)
+	assert.NoError(t, err)
+	assert.Equal(t, "\"hello\"\t\t\"world\"", string(res))
 }
 
 func TestMap(t *testing.T) {
@@ -194,15 +271,4 @@ func TestMap(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expected[key], val)
 	}
-}
-
-func TestNilPointerInSlice(t *testing.T) {
-	t.Parallel()
-
-	s1 := "hello"
-	s3 := "world"
-	input := []*string{&s1, nil, &s3}
-	res, err := tsv.NewTSVEncoder().Encode(input)
-	assert.NoError(t, err)
-	assert.Equal(t, "hello\t\tworld", string(res))
 }
