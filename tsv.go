@@ -186,7 +186,27 @@ func float64Encoder(buf *bytes.Buffer, val reflect.Value) error {
 }
 
 func stringEncoder(buf *bytes.Buffer, val reflect.Value) error {
-	buf.WriteString(val.String())
+	s := val.String()
+	start := 0
+	for i := range len(s) {
+		var repl string
+		switch s[i] {
+		case '\\':
+			repl = `\\`
+		case '\t':
+			repl = `\t`
+		case '\n':
+			repl = `\n`
+		case '\r':
+			repl = `\r`
+		default:
+			continue
+		}
+		buf.WriteString(s[start:i])
+		buf.WriteString(repl)
+		start = i + 1
+	}
+	buf.WriteString(s[start:])
 	return nil
 }
 
