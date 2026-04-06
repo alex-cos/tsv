@@ -119,8 +119,8 @@ func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 	elemType := typ.Elem()
 
-	if isComplexType(elemType) {
-		return e.complexEncoderFn(elemType)
+	if isMapType(elemType) {
+		return e.jsonEncoderFn(elemType)
 	}
 
 	encoder := e.typeEncoder(elemType)
@@ -129,7 +129,8 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 		for i := range val.Len() {
 			if i > 0 {
 				if kind == reflect.Array ||
-					kind == reflect.Slice {
+					kind == reflect.Slice ||
+					kind == reflect.Struct {
 					buf.Write(e.endln())
 				} else {
 					buf.WriteString(e.delim())
@@ -143,7 +144,7 @@ func (e *Encoder) arrayEncoderFn(typ reflect.Type) encoderFunc {
 	}
 }
 
-func (e *Encoder) complexEncoderFn(elemType reflect.Type) encoderFunc {
+func (e *Encoder) jsonEncoderFn(elemType reflect.Type) encoderFunc {
 	return func(buf *bytes.Buffer, val reflect.Value) error {
 		for i := range val.Len() {
 			if i > 0 {
@@ -243,32 +244,7 @@ func float64Encoder(buf *bytes.Buffer, val reflect.Value) error {
 
 func (e *Encoder) stringEncoderFn() encoderFunc {
 	return func(buf *bytes.Buffer, val reflect.Value) error {
-		s := val.String()
-		del := e.delim()
-		start := 0
-		for i := range len(s) {
-			var repl string
-			switch s[i] {
-			case '\\':
-				repl = `\\`
-			case '\t':
-				repl = `\t`
-			case '\n':
-				repl = `\n`
-			case '\r':
-				repl = `\r`
-			default:
-				if del != "" && s[i] == del[0] {
-					repl = `\` + del
-				} else {
-					continue
-				}
-			}
-			buf.WriteString(s[start:i])
-			buf.WriteString(repl)
-			start = i + 1
-		}
-		buf.WriteString(s[start:])
+		buf.WriteString(escapeString(val.String(), e.delim()))
 		return nil
 	}
 }

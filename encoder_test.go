@@ -167,10 +167,7 @@ func TestArrayOfStruct(t *testing.T) {
 	}
 	res, err := tsv.NewTSVEncoder().Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t,
-		"{\"v1\":\"Test1\",\"v2\":10}\t{\"v1\":\"Test2\",\"v2\":20}\t{\"v1\":\"Test3\",\"v2\":30}",
-		string(res),
-	)
+	assert.Equal(t, "Test1\t10\nTest2\t20\nTest3\t30", string(res))
 }
 
 func TestSliceOfStruct(t *testing.T) {
@@ -186,10 +183,7 @@ func TestSliceOfStruct(t *testing.T) {
 	}
 	res, err := tsv.NewTSVEncoder().Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t,
-		"{\"v1\":\"A\",\"v2\":1}\t{\"v1\":\"B\",\"v2\":2}",
-		string(res),
-	)
+	assert.Equal(t, "A\t1\nB\t2", string(res))
 }
 
 func TestSliceOfMap(t *testing.T) {
@@ -332,7 +326,7 @@ func TestDelimiterEscaping(t *testing.T) {
 
 	res, err := tsv.NewTSVEncoder(tsv.WithDelimiter(';')).Encode(input)
 	assert.NoError(t, err)
-	assert.Equal(t, `hello\;world;foo`, string(res))
+	assert.Equal(t, `hello world;foo`, string(res))
 }
 
 func TestEncodeTo(t *testing.T) {
