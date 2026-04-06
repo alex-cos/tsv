@@ -21,6 +21,7 @@ type encoderFunc func(buf *bytes.Buffer, v reflect.Value) error
 // Encoder defines structure for TSV Encoder.
 type Encoder struct {
 	timeFormat string
+	utc        bool
 	crlf       bool
 	delimiter  rune
 }
@@ -31,6 +32,7 @@ type Encoder struct {
 func NewTSVEncoder(opts ...Option) *Encoder {
 	e := &Encoder{
 		timeFormat: "",
+		utc:        false,
 		crlf:       false,
 		delimiter:  0x09,
 	}
@@ -279,6 +281,9 @@ func (e *Encoder) timeEncoder(buf *bytes.Buffer, val reflect.Value) error {
 	if e.timeFormat != "" {
 		buf.WriteString(t.Format(e.timeFormat))
 	} else {
+		if e.utc {
+			t = t.UTC()
+		}
 		buf.Write(strconv.AppendInt(nil, t.Unix(), 10))
 	}
 	return nil
