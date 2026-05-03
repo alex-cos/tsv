@@ -9,7 +9,7 @@ func isMapType(typ reflect.Type) bool {
 	if typ.Kind() == reflect.Map {
 		return true
 	}
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		return isMapType(typ.Elem())
 	}
 	return false

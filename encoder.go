@@ -109,7 +109,7 @@ func (e *Encoder) typeEncoder(typ reflect.Type) encoderFunc {
 		return e.sliceEncoderFn(typ)
 	case reflect.Array:
 		return e.arrayEncoderFn(typ)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return e.interfaceEncoderFn()
 	default:
 		return unsupportedTypeEncoder
@@ -151,7 +151,7 @@ func (e *Encoder) jsonEncoderFn(elemType reflect.Type) encoderFunc {
 				buf.WriteString(e.delim())
 			}
 			elem := val.Index(i)
-			if elemType.Kind() == reflect.Ptr && elem.IsNil() {
+			if elemType.Kind() == reflect.Pointer && elem.IsNil() {
 				continue
 			}
 			b, err := json.Marshal(elem.Interface())
