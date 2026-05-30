@@ -2,10 +2,10 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.25%2B-blue)](https://go.dev/)
 [![Test Status](https://github.com/alex-cos/tsv/actions/workflows/test.yml/badge.svg)](https://github.com/alex-cos/tsv/actions/workflows/test.yml)
+[![Codecov](https://codecov.io/gh/alex-cos/tsv/branch/main/graph/badge.svg)](https://codecov.io/gh/alex-cos/tsv)
 [![Lint Status](https://github.com/alex-cos/tsv/actions/workflows/lint.yml/badge.svg)](https://github.com/alex-cos/tsv/actions/workflows/lint.yml)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alex-cos/tsv)](https://goreportcard.com/report/github.com/alex-cos/tsv)
-
 
 A fast, reflection-based TSV (Tab-Separated Values) encoder for Go.
 
